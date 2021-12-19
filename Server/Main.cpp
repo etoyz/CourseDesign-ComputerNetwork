@@ -13,32 +13,32 @@ using namespace std;
 int parse(char* data, int size)
 {
 	// Output to the terminal
-	cout << "Request information:\n"
-		<< data << endl;
-	cout << size << " bytes recieved" << endl;
+	cout << "请求数据:\n" << data << endl;
+	cout << "共 " << size << " 字节。" << endl;
 
 	// Parsing
-	cout << "解析客户端发送过来的信息：" << endl;
-	cout << "房间状态：";
+	cout << "----------------------" << endl;
+	cout << "解析客户端发送过来的信息: " << endl;
+	cout << "房间状态：\t";
 	if (data[0] == '1')
 		cout << "有人\n";
 	else
 		cout << "无人\n";
-	cout << "房间温度：";
+	cout << "房间温度：\t";
 	cout << data[1] << data[2] << "." << data[3] << "℃\n";
-	cout << "房间湿度：";
+	cout << "房间湿度：\t";
 	cout << data[4] << data[5] << "." << data[6] << "%rh\n";
-	cout << "卧室灯光：";
+	cout << "卧室灯光：\t";
 	if (data[7] == '1')
 		cout << "开启状态\n";
 	else
 		cout << "关闭状态\n";
-	cout << "卫生间灯光：";
+	cout << "卫生间灯光：\t";
 	if (data[8] == '1')
 		cout << "开启状态\n";
 	else
 		cout << "关闭状态\n";
-	cout << "空调：";
+	cout << "空调：\t\t";
 	if (data[9] == '1')
 		cout << "开启状态";
 	else
@@ -46,12 +46,12 @@ int parse(char* data, int size)
 	cout << "(" << data[10] << data[11] << "." << data[12] 
 		<< "℃, 风速:" << data[13] 
 		<< ", 模式:" << data[14] << ")\n";
-	cout << "门窗状态：";
+	cout << "门窗状态：\t";
 	if (data[15] == '1')
 		cout << "开启状态\n";
 	else
 		cout << "关闭状态\n";
-	cout << "窗帘状态：";
+	cout << "窗帘状态：\t";
 	if (data[16] == '1')
 		cout << "开幕状态\n";
 	else
@@ -109,7 +109,8 @@ int main()
 
 		//7.输出客户机的信息
 		char* ip = inet_ntoa(client_addr.sin_addr);
-		cout << "----------------------------------------------------" << endl;
+		cout << "------------------------------------------------------" << endl;
+		cout << "------------------------------------------------------" << endl;
 		cout << "客户机: " << ip << " 连接到本服务器!" << endl;
 
 		//8.处理客户机请求的信息
