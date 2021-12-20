@@ -4,12 +4,16 @@
 #include <iostream>
 #pragma comment (lib, "ws2_32.lib")
 
+using namespace std;
+
 #define IP "127.0.0.1" //绑定的IP
 #define port 81 //监听的端口，可以在范围内自由设定
 #define MAXIMUM_CONNECTION 10 // 最大连接数
+fd_set client_socket_descriptors; // 连接池
 
-using namespace std;
-
+/*
+* 解析客户机请求的信息, 并发送控制数据
+*/
 string parse(string data, int size)
 {
 	// Output to the terminal
@@ -116,7 +120,7 @@ int main()
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	//1.创建一个socket套接字
-	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (local_socket_descriptor == INVALID_SOCKET)
 	{
 		cout << "Server local socket created failed!" << endl;
@@ -157,6 +161,7 @@ int main()
 		socklen_t len = sizeof(client_addr);
 		//6.accept()函数：阻塞运行，直到收到某一客户机的连接请求，并返回客户机的描述符
 		SOCKET client_socket_descriptor = accept(local_socket_descriptor, (struct sockaddr*)&client_addr, &len);
+		//WSAAsyncSelect(local_socket_descriptor,NULL,NULL,FD_ACCEPT)
 		if (client_socket_descriptor == SOCKET_ERROR)
 		{
 			cout << "Unable to create client socket!\n" << endl;
@@ -165,8 +170,9 @@ int main()
 
 		//7.输出客户机的信息
 		string ip = inet_ntoa(client_addr.sin_addr);
-		cout << "========================================================" << endl;
+		cout << "\n\n========================================================" << endl;
 		cout << "客户机: " << ip << " 连接到本服务器!" << endl;
+		cout << client_socket_descriptors.fd_count;
 
 		//8.处理客户机请求的信息
 		char buff[100] = { 0 };
