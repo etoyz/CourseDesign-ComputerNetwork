@@ -24,10 +24,10 @@ int main()
 	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (local_socket_descriptor == INVALID_SOCKET)
 	{
-		cout << "Server's local socket created failed!" << endl;
+		cout << "服务器Socket创建失败！" << endl;
 		exit(-1);
 	}
-	cout << "Server's local socket created successfully!" << endl;
+	cout << "服务器Socket创建成功！" << endl;
 
 	/*
 	* 填写初始化套接字所需的信息
@@ -45,10 +45,10 @@ int main()
 	int res = bind(local_socket_descriptor, (struct sockaddr*)&local_addr, sizeof(local_addr));
 	if (res == SOCKET_ERROR)
 	{
-		cout << "Socket initialization failed!(check whether IP address is valid)" << endl;
+		cout << "Socket初始化失败！" << endl;
 		exit(-1);
 	}
-	cout << "Socket initialization successfully!" << endl;
+	cout << "Socket初始化成功！" << endl;
 	cout << "本服务器IP地址为：" << get_local_ip() << endl;
 
 	/*
@@ -56,7 +56,7 @@ int main()
 	* 参数二：监听的进程数
 	*/
 	listen(local_socket_descriptor, MAXIMUM_CONNECTION);
-	cout << "Waiting for a connection...." << endl;
+	cout << "正在等待客户端的连接...." << endl;
 
 	while (true)//循环接收客户端的请求
 	{
