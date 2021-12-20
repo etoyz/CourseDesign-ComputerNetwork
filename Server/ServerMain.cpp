@@ -6,9 +6,10 @@
 
 using namespace std;
 
-#define IP "192.168.1.151" //绑定的IP
 #define port 81 //监听的端口
 #define MAXIMUM_CONNECTION 10 // 最大连接数
+
+string IP;
 
 /*
 * 解析客户机请求的数据, 并发送控制数据
@@ -115,12 +116,21 @@ string parse(string data, int size)
 	return cmd_to_client;
 }
 
+string get_local_ip() {
+	char host[256];
+	int hostname = gethostname(host, sizeof(host));
+	struct hostent* host_entry;
+	host_entry = gethostbyname(host);
+	return inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[3]));
+}
+
 int main()
 {
 	//使用Windows系统API
 	WSADATA wsadata;
 	if (WSAStartup(0x0202, &wsadata) != 0)
 		return false;
+
 
 	// 创建一个socket套接字
 	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -138,7 +148,7 @@ int main()
 	struct sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
 	local_addr.sin_port = htons(port);  //绑定特定端口
-	local_addr.sin_addr.s_addr = inet_addr(IP); //绑定特定IP地址
+	local_addr.sin_addr.s_addr = inet_addr(get_local_ip().c_str()); //绑定服务器本地IP地址
 
 	/*
 	* 初始化套接字
@@ -151,6 +161,7 @@ int main()
 		exit(-1);
 	}
 	cout << "Socket initialization successfully!" << endl;
+	cout << "本服务器IP地址为：" << get_local_ip() << endl;
 
 	/* 
 	* listen()函数：监听试图连接本机的客户端
