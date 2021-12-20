@@ -127,13 +127,14 @@ string parse(string data, int size)
 	else
 		cout << "关闭状态\n";
 	cout << "空调：\t\t";
-	if (data[9] == '1')
+	if (data[9] == '1') {
 		cout << "开启状态";
+		cout << "(" << data[10] << data[11] << "." << data[12]
+			<< "℃, 风速:" << data[13]
+			<< ", 模式:" << data[14] << ")\n";
+	}
 	else
 		cout << "关闭状态";
-	cout << "(" << data[10] << data[11] << "." << data[12]
-		<< "℃, 风速:" << data[13]
-		<< ", 模式:" << data[14] << ")\n";
 	cout << "门窗状态：\t";
 	if (data[15] == '1')
 		cout << "开启状态\n";

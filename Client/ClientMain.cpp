@@ -1,12 +1,14 @@
 #include <winsock2.h>
 #include <iostream>
+#include <sstream>
 #pragma comment (lib, "ws2_32.lib")
 
 using namespace std;
 
 SOCKET server_socket_descriptor;
-bool SendToServer(int, char*, char*);
+bool SendToServer(int, char*, const char* Msg);
 void HandleDataFromServer();
+string get_all_sensor_data();
 
 /*
 	[1][3][3][2][[1][3][1][1]][1][1]
@@ -24,16 +26,18 @@ int main()
 	char ip[20];
 	cout << "请输入IP地址：";
 	cin >> ip;
-	char msg[] = "111111111111111111";
-
-	if (SendToServer(81, ip, msg))
-		cout << "发送传感器数据：" << msg << endl;
-	else
-	{
-		cout << "Sent failed!" << endl;
-		exit(1);
+	while (true) {
+		string str = get_all_sensor_data();
+		if (SendToServer(81, ip, str.c_str()))
+			cout << "发送传感器数据：" << str.c_str() << endl;
+		else
+		{
+			cout << "Sent failed!" << endl;
+			exit(1);
+		}
+		HandleDataFromServer();
+		Sleep(1000);
 	}
-	HandleDataFromServer();
 	// 释放资源
 	closesocket(server_socket_descriptor);
 	WSACleanup();
@@ -43,7 +47,7 @@ int main()
 /*
 * 发送指定数据到指定IP端口
 */
-bool SendToServer(int PortNo, char* IPAddress, char* Msg)
+bool SendToServer(int PortNo, char* IPAddress, const char* Msg)
 {
 	//使用Windows系统API
 	WSADATA wsadata;
@@ -110,4 +114,26 @@ void HandleDataFromServer()
 		cout << "\n控制信号解析完毕！\n";
 	}
 
+}
+
+string get_all_sensor_data() {
+	srand(time(NULL));
+	stringstream data;
+	data << rand() % 2; // 有无人
+	data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+	data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 湿度00.0 - 49.9 ℃
+	data << rand() % 2 << rand() % 2; // 控制2个灯光
+	int ac = rand() % 2; // 空调状态
+	data << rand() % 2;
+	if (ac == 1) {
+		data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+		data << (rand() % 3) + 1 ; // 风速  1 2 3
+		data << (rand() % 2); // 0制冷 1制热
+	}
+	else
+		data << "xxxxx";
+	data << rand() % 2; // 门窗状态
+	data << rand() % 2; // 窗帘状态
+
+	return data.str();
 }
