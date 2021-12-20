@@ -10,9 +10,93 @@ using namespace std;
 #define MAXIMUM_CONNECTION 10 // 最大连接数
 
 string IP;
+string parse(string, int);
+string get_local_ip();
+
+int main()
+{
+	//使用Windows系统API
+	WSADATA wsadata;
+	if (WSAStartup(0x0202, &wsadata) != 0)
+		return false;
+
+	// 创建一个socket套接字
+	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (local_socket_descriptor == INVALID_SOCKET)
+	{
+		cout << "Server local socket created failed!" << endl;
+		exit(-1);
+	}
+	cout << "Server local socket created successfully!" << endl;
+
+	/*
+	* 填写初始化套接字所需的信息
+	* sockaddr_in结构体：可以存储一套网络地址（包括IP与端口）,此处存储本机IP地址与本地的一个端口
+	*/
+	struct sockaddr_in local_addr;
+	local_addr.sin_family = AF_INET;
+	local_addr.sin_port = htons(port);  //绑定特定端口
+	local_addr.sin_addr.s_addr = inet_addr(get_local_ip().c_str()); //绑定服务器本地IP地址
+
+	/*
+	* 初始化套接字
+	* bind()： 将一个网络地址与一个套接字绑定，此处将服务器本地地址绑定到一个套接字上
+	*/
+	int res = bind(local_socket_descriptor, (struct sockaddr*)&local_addr, sizeof(local_addr));
+	if (res == SOCKET_ERROR)
+	{
+		cout << "Socket initialization failed!(check whether IP address is valid)" << endl;
+		exit(-1);
+	}
+	cout << "Socket initialization successfully!" << endl;
+	cout << "本服务器IP地址为：" << get_local_ip() << endl;
+
+	/*
+	* listen()函数：监听试图连接本机的客户端
+	* 参数二：监听的进程数
+	*/
+	listen(local_socket_descriptor, MAXIMUM_CONNECTION);
+	cout << "Waiting for a connection...." << endl;
+
+	while (true)//循环接收客户端的请求
+	{
+		// 5.创建一个sockaddr_in结构体，用来存储客户机的地址
+		struct sockaddr_in client_addr;
+		socklen_t len = sizeof(client_addr);
+		// accept()函数：阻塞运行，直到收到某一客户机的连接请求，并返回客户机的描述符
+		SOCKET client_socket_descriptor = accept(local_socket_descriptor, (struct sockaddr*)&client_addr, &len);
+		if (client_socket_descriptor == SOCKET_ERROR)
+		{
+			cout << "Unable to create client socket!\n" << endl;
+			exit(-1);
+		}
+
+		// 输出客户机的信息
+		string ip = inet_ntoa(client_addr.sin_addr);
+		cout << "\n\n========================================================" << endl;
+		cout << "客户机: " << ip << " 连接到本服务器!" << endl;
+		//cout << client_socket_descriptors.fd_count;
+
+		// 处理客户机请求的数据
+		char buff[2048] = { 0 };
+		int size = recv(client_socket_descriptor, buff, sizeof(buff), 0);
+		string recv_data;
+		recv_data.assign(buff, buff + size);
+		string cmd_to_client = parse(recv_data, size);
+
+		// 使用第6步accept()返回socket描述符，即客户机的描述符，进行通信。
+		send(client_socket_descriptor, cmd_to_client.c_str(), cmd_to_client.size(), 0); //返回给客户端数据
+
+		// 关闭该客户的socket
+		shutdown(client_socket_descriptor, 2);
+	}
+	shutdown(local_socket_descriptor, 2);
+	WSACleanup();
+	return 0;
+}
 
 /*
-* 解析客户机请求的数据, 并发送控制数据
+* 解析请求的数据, 并发送控制数据
 */
 string parse(string data, int size)
 {
@@ -116,6 +200,9 @@ string parse(string data, int size)
 	return cmd_to_client;
 }
 
+/*
+* 获取本机IP
+*/
 string get_local_ip() {
 	char host[256];
 	int hostname = gethostname(host, sizeof(host));
@@ -123,87 +210,3 @@ string get_local_ip() {
 	host_entry = gethostbyname(host);
 	return inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[3]));
 }
-
-int main()
-{
-	//使用Windows系统API
-	WSADATA wsadata;
-	if (WSAStartup(0x0202, &wsadata) != 0)
-		return false;
-
-
-	// 创建一个socket套接字
-	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (local_socket_descriptor == INVALID_SOCKET)
-	{
-		cout << "Server local socket created failed!" << endl;
-		exit(-1);
-	}
-	cout << "Server local socket created successfully!" << endl;
-
-	/*
-	* 填写初始化套接字所需的信息
-	* sockaddr_in结构体：可以存储一套网络地址（包括IP与端口）,此处存储本机IP地址与本地的一个端口
-	*/
-	struct sockaddr_in local_addr;
-	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(port);  //绑定特定端口
-	local_addr.sin_addr.s_addr = inet_addr(get_local_ip().c_str()); //绑定服务器本地IP地址
-
-	/*
-	* 初始化套接字
-	* bind()： 将一个网络地址与一个套接字绑定，此处将服务器本地地址绑定到一个套接字上
-	*/
-	int res = bind(local_socket_descriptor, (struct sockaddr*)&local_addr, sizeof(local_addr));
-	if (res == SOCKET_ERROR)
-	{
-		cout << "Socket initialization failed!(check whether IP address is valid)" << endl;
-		exit(-1);
-	}
-	cout << "Socket initialization successfully!" << endl;
-	cout << "本服务器IP地址为：" << get_local_ip() << endl;
-
-	/* 
-	* listen()函数：监听试图连接本机的客户端
-	* 参数二：监听的进程数
-	*/
-	listen(local_socket_descriptor, MAXIMUM_CONNECTION);
-	cout << "Waiting for a connection...." << endl;
-
-	while (true)//循环接收客户端的请求
-	{
-		// 5.创建一个sockaddr_in结构体，用来存储客户机的地址
-		struct sockaddr_in client_addr;
-		socklen_t len = sizeof(client_addr);
-		// accept()函数：阻塞运行，直到收到某一客户机的连接请求，并返回客户机的描述符
-		SOCKET client_socket_descriptor = accept(local_socket_descriptor, (struct sockaddr*)&client_addr, &len);
-		if (client_socket_descriptor == SOCKET_ERROR)
-		{
-			cout << "Unable to create client socket!\n" << endl;
-			exit(-1);
-		}
-
-		// 输出客户机的信息
-		string ip = inet_ntoa(client_addr.sin_addr);
-		cout << "\n\n========================================================" << endl;
-		cout << "客户机: " << ip << " 连接到本服务器!" << endl;
-		//cout << client_socket_descriptors.fd_count;
-
-		// 处理客户机请求的数据
-		char buff[100] = { 0 };
-		int size = recv(client_socket_descriptor, buff, sizeof(buff), 0);
-		string recv_data;
-		recv_data.assign(buff, buff + size);
-		string cmd_to_client = parse(recv_data, size);
-
-		// 使用第6步accept()返回socket描述符，即客户机的描述符，进行通信。
-		send(client_socket_descriptor, cmd_to_client.c_str(), cmd_to_client.size(), 0); //返回给客户端数据
-
-		// 关闭该客户的socket
-		shutdown(client_socket_descriptor, 2);
-	}
-	shutdown(local_socket_descriptor, 2);
-	WSACleanup();
-	return 0;
-}
-
