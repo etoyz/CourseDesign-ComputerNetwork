@@ -24,10 +24,10 @@ int main()
 	SOCKET local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (local_socket_descriptor == INVALID_SOCKET)
 	{
-		cout << "Server local socket created failed!" << endl;
+		cout << "Server's local socket created failed!" << endl;
 		exit(-1);
 	}
-	cout << "Server local socket created successfully!" << endl;
+	cout << "Server's local socket created successfully!" << endl;
 
 	/*
 	* 填写初始化套接字所需的信息
@@ -73,9 +73,8 @@ int main()
 
 		// 输出客户机的信息
 		string ip = inet_ntoa(client_addr.sin_addr);
-		cout << "\n\n========================================================" << endl;
-		cout << "客户机: " << ip << " 连接到本服务器!" << endl;
-		//cout << client_socket_descriptors.fd_count;
+		cout << "\n\n\n\n======================================================================" << endl;
+		cout << "接收到新的连接请求! 源IP: " << ip << endl;
 
 		// 处理客户机请求的数据
 		char buff[2048] = { 0 };
@@ -105,7 +104,7 @@ string parse(string data, int size)
 	cout << "共 " << size << " 字节。" << endl;
 
 	// Parsing
-	cout << "----------------------" << endl;
+	cout << "---------------------------------------------" << endl;
 	cout << "解析客户端发送过来的信息: " << endl;
 	cout << "房间状态：\t";
 	if (data[0] == '1')
@@ -156,7 +155,7 @@ string parse(string data, int size)
 		空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
 	*/
 	string cmd_to_client;
-	cout << "----------------------" << endl;
+	cout << "---------------------------------------------" << endl;
 	cout << "根据解析结果发送控制信息: " << endl;
 	if (data[0] == '0') { // 无人
 		cout << "关闭所有设备\n";
@@ -184,20 +183,21 @@ string parse(string data, int size)
 		sscanf(tempe_str.c_str(), "%f", &t);
 		cout << "温度为 " + tempe_str + " ℃，";
 		if (t > 30) { // 且温度高于30度
-			cout << "开启空调制冷，设定温度为24度，风速为中风";
+			cout << "开启空调制冷，设定温度为24度，风速为中风\n";
 			cmd_to_client += "102401";
 		}
 		else if (t < 15) { // 且温度低于15度
-			cout << "开启空调制热，设定温度为26度，风速为高风";
+			cout << "开启空调制热，设定温度为26度，风速为高风\n";
 			cmd_to_client += "112610";
 		}
 		else {
+			cout << "空调维持原状态\n";
 			cmd_to_client += "0XXXXX";
 		}
 	}
 	else cmd_to_client += "0XXXXX";
 
-	cout << "\n发送控制数据： " + cmd_to_client;
+	cout << "\n向客户端发送控制数据： " + cmd_to_client;
 	return cmd_to_client;
 }
 

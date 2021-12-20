@@ -27,16 +27,17 @@ int main()
 	cout << "请输入IP地址：";
 	cin >> ip;
 	while (true) {
+		cout << "\n\n\n\n======================================================================" << endl;
 		string str = get_all_sensor_data();
 		if (SendToServer(81, ip, str.c_str()))
 			cout << "发送传感器数据：" << str.c_str() << endl;
 		else
 		{
-			cout << "Sent failed!" << endl;
+			cout << "发送失败!" << endl;
 			exit(1);
 		}
 		HandleDataFromServer();
-		Sleep(1000);
+		Sleep(10000);
 	}
 	// 释放资源
 	closesocket(server_socket_descriptor);
@@ -84,9 +85,11 @@ void HandleDataFromServer()
 {
 	char buff[100] = { 0 };
 	int size = recv(server_socket_descriptor, buff, sizeof(buff), MSG_WAITALL);
-	cout << "接受到控制信息：" << buff << endl;
-	cout << "----------------------" << endl;
-	cout << "发出控制信号如下:\n";
+	cout << "---------------------------------------------" << endl;
+	cout << "接受到来自服务器的控制数据：" << buff << endl;
+	cout << "解析服务器发出的控制数据..." << endl;
+	cout << "---------------------------------------------" << endl;
+	cout << "做出如下动作:\n";
 	if (buff[0] == '1')
 		cout << "关闭所有设备\n";
 	if (buff[1] == '1')
@@ -111,9 +114,9 @@ void HandleDataFromServer()
 		}
 		else
 			cout << "风速为高风";
-		cout << "\n控制信号解析完毕！\n";
 	}
 
+	cout << "\n\n控制信号解析完毕！";
 }
 
 string get_all_sensor_data() {
@@ -131,7 +134,7 @@ string get_all_sensor_data() {
 		data << (rand() % 2); // 0制冷 1制热
 	}
 	else
-		data << "xxxxx";
+		data << "XXXXX";
 	data << rand() % 2; // 门窗状态
 	data << rand() % 2; // 窗帘状态
 
