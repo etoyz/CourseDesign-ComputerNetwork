@@ -5,8 +5,45 @@
 using namespace std;
 
 SOCKET server_socket_descriptor;
+bool SendToServer(int, char*, char*);
+void HandleDataFromServer();
 
-bool SendToHost(int PortNo, char* IPAddress, char* Msg)
+/*
+	[1][3][3][2][[1][3][1][1]][1][1]
+	共 17位
+	房间状态：有无人。只上传
+	温度传感器：采集房间温度信息。只上传
+	湿度传感器：采集房间湿度信息。只上传
+	灯光：开闭状态；至少要有两路：卧室、卫生间；
+	空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
+	门窗状态：开闭状态；
+	窗帘状态：开闭幕状态；
+*/
+int main()
+{
+	char ip[20];
+	cout << "请输入IP地址：";
+	cin >> ip;
+	char msg[] = "111111111111111111";
+
+	if (SendToServer(81, ip, msg))
+		cout << "发送传感器数据：" << msg << endl;
+	else
+	{
+		cout << "Sent failed!" << endl;
+		exit(1);
+	}
+	HandleDataFromServer();
+	// 释放资源
+	closesocket(server_socket_descriptor);
+	WSACleanup();
+	system("pause");
+}
+
+/*
+* 发送指定数据到指定IP端口
+*/
+bool SendToServer(int PortNo, char* IPAddress, char* Msg)
 {
 	//使用Windows系统API
 	WSADATA wsadata;
@@ -73,33 +110,4 @@ void HandleDataFromServer()
 		cout << "\n控制信号解析完毕！\n";
 	}
 
-}
-
-/*
-	[1][3][3][2][[1][3][1][1]][1][1]
-	共 17位
-	房间状态：有无人。只上传
-	温度传感器：采集房间温度信息。只上传
-	湿度传感器：采集房间湿度信息。只上传
-	灯光：开闭状态；至少要有两路：卧室、卫生间；
-	空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
-	门窗状态：开闭状态；
-	窗帘状态：开闭幕状态；
-*/
-int main()
-{
-	char ip[] = "192.168.1.151";
-	char msg[] = "111111111111111111";
-	if (SendToHost(81, ip, msg))
-		cout << "发送传感器数据：" << msg << endl;
-	else
-	{
-		cout << "Sent failed!" << endl;
-		exit(1);
-	}
-	HandleDataFromServer();
-	// 释放资源
-	closesocket(server_socket_descriptor);
-	WSACleanup();
-	system("pause");
 }
