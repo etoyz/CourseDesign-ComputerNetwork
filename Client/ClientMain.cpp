@@ -22,20 +22,24 @@ struct Cmd_From_Server
 
 int main()
 {
-	cout << "请输入IP地址：";
+	cout << "请输入服务器IP地址：";
 	cin >> ip;
 	while (true) {
 		cout << "\n\n\n\n======================================================================" << endl;
 		current_sersor_data = get_all_sensor_data();
-		if (send_to_server(PORT, ip, current_sersor_data.c_str()))
-			cout << "发送传感器数据：" << current_sersor_data.c_str() << endl;
-		else
-		{
+		if (send_to_server(PORT, ip, ("DATA" + current_sersor_data).c_str()))
+			cout << "发送传感器数据：" << "DATA" + current_sersor_data << endl;
+		else {
 			cout << "发送失败!" << endl;
 			exit(1);
 		}
 		handle_data_from_server();
-		//HandleDataFromServer();
+		if (send_to_server(PORT, ip, ("STATACK")))
+			cout << "发送传感器数据：" << "STATACK" << endl;
+		else {
+			cout << "发送失败!" << endl;
+			exit(1);
+		}
 		Sleep(500);
 	}
 	// 释放资源

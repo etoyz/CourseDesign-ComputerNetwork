@@ -48,13 +48,15 @@ void connection_handler(SOCKET local_socket, SOCKET client_socket) {
 	// 接受客户端发来的数据
 	string data_rv = receive_data(client_socket);
 
-	// 解析客户端请求，并生成控制指令
-	string cmd_to_client = parse(data_rv);
+	// 解析客户端请求数据
+	string ret_p = parse(data_rv);
 
 	// 向客户端发送控制指令
-	int WSAAPI ret = send_data(client_socket, cmd_to_client);
-	if (ret != SOCKET_ERROR) {
-		cout << "\t共 " << ret << " 字节";
+	if (ret_p != "") { // 如果不是STAT请求，即是DATA请求时，则对客户端发送返回的指令
+		int WSAAPI ret_s = send_data(client_socket, ret_p);
+		if (ret_s != SOCKET_ERROR) {
+			cout << "\t共 " << ret_s << " 字节。\t";
+		}
 	}
 
 	// 关闭该客户的socket
@@ -64,22 +66,20 @@ void connection_handler(SOCKET local_socket, SOCKET client_socket) {
 /*
 * 解析客户端的请求数据
 *
-* @returns 如果是DATA请求，生成应返回的控制数据; 如果是STAT请求，则返回空字符串
+* @returns 如果是DATA请求，生成对应的控制指令并返回; 如果是STAT请求，则返回空串
 */
 string parse(string data)
 {
 	string ret; // 返回值
 
-	// 输出解析信息到标准输出设备
-	cout << "请求数据:\n" << data << endl;
-	cout << "共 " << data.size() << " 字节。" << endl;
-
 	// 解析
 	Data_From_Client data_from_client;
 	data_from_client.head = data.substr(0, 4);
 	data_from_client.data = data.substr(4, data.size());
+	cout << "请求数据:\n" << data << endl;
+	cout << "共 " << data.size() << " 字节。\t\t(" << data_from_client.head << "请求)" << endl;
+	data = data_from_client.data;
 	if (data_from_client.head == "DATA") {
-		data = data_from_client.data;
 		cout << "---------------------------------------------" << endl;
 		cout << "解析客户端发送过来的信息: " << endl;
 		cout << "房间状态：\t";
@@ -173,8 +173,17 @@ string parse(string data)
 		}
 		else ret += "0XXXX";
 	}
-	else if (data_from_client.head == "STAT")
+	else if (data_from_client.head == "STAT") {
+		cout << "---------------------------------------------" << endl;
+		cout << "解析客户端发送过来的信息: " << endl;
+		if (data == "ACK")
+			cout << "客户端回复：指令执行成功！ 此次会话终止！";
+		else if (data == "ERR") {
+			cout << "客户端回复：指令执行失败！";
+		}
 		return "";
+	}
+
 	return ret;
 }
 
