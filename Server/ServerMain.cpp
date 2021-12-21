@@ -2,6 +2,7 @@
 #include <WS2tcpip.h>
 #include <io.h>
 #include <iostream>
+#include <thread>
 #pragma comment (lib, "ws2_32.lib")
 
 using namespace std;
@@ -9,6 +10,7 @@ using namespace std;
 #define PORT 81 //监听的端口
 #define MAXIMUM_CONNECTION 10 // 最大连接数
 
+void connection_handler(SOCKET local_socket, SOCKET client_socket);
 SOCKET local_socket; // 服务器本地Socket
 int connection_cnt = 0; // 当前累积连接数
 bool initialize_socket(); // 初始化本地Socket
@@ -25,48 +27,45 @@ struct Data_From_Client
 	string data;
 };
 
-int main()
-{
+int main() {
 	// 初始化服务器本地套接字
 	if (!initialize_socket())
 		exit(-1);
 
 	cout << "正在等待客户端的连接...." << endl;
-	while (true)//循环接收客户端的请求
-	{
-		// 阻塞等待客户端的连接
-		SOCKET client_socket = wait_for_connection();
-		if (client_socket == SOCKET_ERROR)
-			exit(-1);
 
-		// 接受客户端发来的数据
-		string data_rv = receive_data(client_socket);
-
-		// 解析客户端请求，并生成控制指令
-		string cmd_to_client = parse(data_rv);
-
-		// 向客户端发送控制指令
-		int WSAAPI ret = send_data(client_socket, cmd_to_client);
-		if (ret != SOCKET_ERROR) {
-			cout << "\t共 " << ret << " 字节";
-		}
-
-		//cout << "\n一秒后发送GET信号";
-		parse(receive_data(client_socket));
-
-		// 关闭该客户的socket
-		shutdown(client_socket, 2);
+	SOCKET client_socket;
+	while ((client_socket = wait_for_connection()) != SOCKET_ERROR) {//循环接收客户端的请求
+		thread thread(&connection_handler, local_socket, client_socket);
+		thread.join();
 	}
 	shutdown(local_socket, 2);
 	WSACleanup();
 	return 0;
 }
 
+void connection_handler(SOCKET local_socket, SOCKET client_socket) {
+	// 接受客户端发来的数据
+	string data_rv = receive_data(client_socket);
+
+	// 解析客户端请求，并生成控制指令
+	string cmd_to_client = parse(data_rv);
+
+	// 向客户端发送控制指令
+	int WSAAPI ret = send_data(client_socket, cmd_to_client);
+	if (ret != SOCKET_ERROR) {
+		cout << "\t共 " << ret << " 字节";
+	}
+
+	// 关闭该客户的socket
+	shutdown(client_socket, 2);
+}
+
 /*
 * 解析客户端的请求数据
-* 
+*
 * @returns 如果是DATA请求，生成应返回的控制数据; 如果是STAT请求，则返回空字符串
-*/ 
+*/
 string parse(string data)
 {
 	string ret; // 返回值
@@ -77,7 +76,7 @@ string parse(string data)
 
 	// 解析
 	Data_From_Client data_from_client;
-	data_from_client.head = data.substr(0,4);
+	data_from_client.head = data.substr(0, 4);
 	data_from_client.data = data.substr(4, data.size());
 	if (data_from_client.head == "DATA") {
 		data = data_from_client.data;
