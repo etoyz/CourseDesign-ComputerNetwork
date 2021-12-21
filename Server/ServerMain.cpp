@@ -9,15 +9,14 @@ using namespace std;
 #define PORT 81 //监听的端口
 #define MAXIMUM_CONNECTION 10 // 最大连接数
 
-SOCKET local_socket_descriptor;
-int connection_cnt = 0;
-string IP;
-bool initialize_socket();
-SOCKET wait_for_connection();
-int WSAAPI send_data(SOCKET, string);
-string receive_data(SOCKET);
-string parse(string);
-string get_local_ip();
+SOCKET local_socket; // 服务器本地Socket
+int connection_cnt = 0; // 当前累积连接数
+bool initialize_socket(); // 初始化本地Socket
+SOCKET wait_for_connection(); // 阻塞等待客户端连接
+int WSAAPI send_data(SOCKET, string); // 向客户端发送数据
+string receive_data(SOCKET); // 从客户端接收数据
+string parse(string); // 解析客户端传感器数据，并生成控制指令
+string get_local_ip(); // 获取本机IP
 
 int main()
 {
@@ -31,18 +30,18 @@ int main()
 	while (true)//循环接收客户端的请求
 	{
 		// 阻塞等待客户端的连接
-		SOCKET client_socket_descriptor = wait_for_connection();
-		if (client_socket_descriptor == SOCKET_ERROR)
+		SOCKET client_socket = wait_for_connection();
+		if (client_socket == SOCKET_ERROR)
 			exit(-1);
 
 		// 接受客户端发来的数据
-		string data_rv = receive_data(client_socket_descriptor);
+		string data_rv = receive_data(client_socket);
 
 		// 解析客户端请求，并生成控制指令
 		string cmd_to_client = parse(data_rv);
 
 		// 向客户端发送控制指令
-		int WSAAPI ret = send_data(client_socket_descriptor, cmd_to_client);
+		int WSAAPI ret = send_data(client_socket, cmd_to_client);
 		if (ret != SOCKET_ERROR) {
 			cout << "\t共 " << ret << " 字节";
 		}
@@ -53,16 +52,14 @@ int main()
 		//send(client_socket_descriptor, "GET", 3, 0); //返回给客户端数据
 
 		// 关闭该客户的socket
-		shutdown(client_socket_descriptor, 2);
+		shutdown(client_socket, 2);
 	}
-	shutdown(local_socket_descriptor, 2);
+	shutdown(local_socket, 2);
 	WSACleanup();
 	return 0;
 }
 
-/*
-* 解析客户端的请求数据, 并生成应返回的控制数据
-*/
+// 解析客户端的请求数据, 并生成应返回的控制数据
 string parse(string data)
 {
 	// 输出解析信息到标准输出设备
@@ -167,9 +164,7 @@ string parse(string data)
 	return cmd_to_client;
 }
 
-/*
-* 获取本机IP
-*/
+// 获取本机IP
 string get_local_ip() {
 	char host[256];
 	int hostname = gethostname(host, sizeof(host));
@@ -179,9 +174,7 @@ string get_local_ip() {
 }
 
 
-/*
-* 初始化服务器本地套接字，将其置为监听状态
-*/
+// 初始化服务器本地套接字，将其置为监听状态
 bool initialize_socket() {
 	//使用Windows系统API
 	WSADATA wsadata;
@@ -189,8 +182,8 @@ bool initialize_socket() {
 		return false;
 
 	// 创建socket套接字
-	local_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (local_socket_descriptor == INVALID_SOCKET)
+	local_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (local_socket == INVALID_SOCKET)
 	{
 		cout << "服务器Socket创建失败！" << endl;
 		return false;
@@ -210,7 +203,7 @@ bool initialize_socket() {
 	* 初始化套接字
 	* bind()： 将一个网络地址与一个套接字绑定，此处将服务器本地地址绑定到一个套接字上
 	*/
-	int res = bind(local_socket_descriptor, (struct sockaddr*)&local_addr, sizeof(local_addr));
+	int res = bind(local_socket, (struct sockaddr*)&local_addr, sizeof(local_addr));
 	if (res == SOCKET_ERROR)
 	{
 		cout << "Socket初始化失败！" << endl;
@@ -222,20 +215,18 @@ bool initialize_socket() {
 	/*
 	* listen()函数：将指定套接字置为监听状态
 	*/
-	listen(local_socket_descriptor, MAXIMUM_CONNECTION);
+	listen(local_socket, MAXIMUM_CONNECTION);
 	return true;
 }
 
-/*
-* 阻塞等待客户端的连接请求，连接发生后返回客户端的Socket
-*/
+// 阻塞等待客户端的连接请求，连接发生后返回客户端的Socket
 SOCKET wait_for_connection() {
 	SOCKET s;
 	// 创建一个sockaddr_in结构体，用来存储客户机的地址
 	struct sockaddr_in client_addr;
 	socklen_t len = sizeof(client_addr);
 	// accept()函数：阻塞运行，直到收到某一客户机的连接请求，并返回客户机的描述符
-	s = accept(local_socket_descriptor, (struct sockaddr*)&client_addr, &len);
+	s = accept(local_socket, (struct sockaddr*)&client_addr, &len);
 	if (s == SOCKET_ERROR)
 	{
 		cout << "无法为客户端创建Socket!\n" << endl;
@@ -250,9 +241,7 @@ SOCKET wait_for_connection() {
 	return s;
 }
 
-/*
-* 从Socket中接收数据并返回
-*/
+// 从Socket中接收数据并返回
 string receive_data(SOCKET s) {
 	char buff[2048] = { 0 };
 	int size = recv(s, buff, sizeof(buff), 0);
@@ -262,6 +251,7 @@ string receive_data(SOCKET s) {
 	return recv_data;
 }
 
+// 向客户端发送数据
 int WSAAPI send_data(SOCKET s, string data) {
 	cout << "\n向客户端发送控制数据： " + data;
 	return send(s, data.c_str(), data.size(), 0); //返回给客户端数据

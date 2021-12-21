@@ -5,20 +5,20 @@
 
 using namespace std;
 
-#define PORT 81
-char ip[20];
-SOCKET server_socket_descriptor;
-string current_sersor_data;
-bool SendToServer(int, char*, const char* Msg);
-void HandleDataFromServer();
-string get_all_sensor_data();
+#define PORT 81 // 端口
+char ip[20];	// 存储服务器IP
+SOCKET server_socket; // 服务器Socket
+bool send_to_server(int, char*, const char*); // 向服务器发送数据
+void handle_data_from_server(); // 处理从服务器发回的指令
+string current_sersor_data; // 当前传感器数据
+string get_all_sensor_data(); // 获取全部传感器数据
+
 // 此结构体存储服务器传回的指令
 struct Cmd_From_Server
 {
 	string head;
 	string data;
 };
-
 
 int main()
 {
@@ -27,27 +27,25 @@ int main()
 	while (true) {
 		cout << "\n\n\n\n======================================================================" << endl;
 		current_sersor_data = get_all_sensor_data();
-		if (SendToServer(PORT, ip, current_sersor_data.c_str()))
+		if (send_to_server(PORT, ip, current_sersor_data.c_str()))
 			cout << "发送传感器数据：" << current_sersor_data.c_str() << endl;
 		else
 		{
 			cout << "发送失败!" << endl;
 			exit(1);
 		}
-		HandleDataFromServer();
+		handle_data_from_server();
 		//HandleDataFromServer();
 		Sleep(500);
 	}
 	// 释放资源
-	closesocket(server_socket_descriptor);
+	closesocket(server_socket);
 	WSACleanup();
 	system("pause");
 }
 
-/*
-* 发送指定数据到指定IP端口
-*/
-bool SendToServer(int PortNo, char* IPAddress, const char* Msg)
+// 发送指定数据到指定IP端口
+bool send_to_server(int PortNo, char* IPAddress, const char* Msg)
 {
 	//使用Windows系统API
 	WSADATA wsadata;
@@ -60,30 +58,28 @@ bool SendToServer(int PortNo, char* IPAddress, const char* Msg)
 	target.sin_port = htons(PortNo);
 	target.sin_addr.s_addr = inet_addr(IPAddress);
 	// 创建套接字
-	server_socket_descriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); //Create socket
-	if (server_socket_descriptor == INVALID_SOCKET)
+	server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); //Create socket
+	if (server_socket == INVALID_SOCKET)
 	{
 		return false; //Couldn't create the socket
 	}
 
 	// 尝试与服务器连接
-	if (connect(server_socket_descriptor, (SOCKADDR*)&target, sizeof(target)) == SOCKET_ERROR)
+	if (connect(server_socket, (SOCKADDR*)&target, sizeof(target)) == SOCKET_ERROR)
 	{
 		return false;
 	}
 	else {
-		send(server_socket_descriptor, Msg, strlen(Msg), 0);
+		send(server_socket, Msg, strlen(Msg), 0);
 		return true;
 	}
 }
 
-/*
-* 处理从服务器传回的控制数据
-*/
-void HandleDataFromServer()
+// 处理从服务器传回的控制数据
+void handle_data_from_server()
 {
 	char buff[100] = { 0 };
-	int size = recv(server_socket_descriptor, buff, sizeof(buff), MSG_WAITALL);
+	int size = recv(server_socket, buff, sizeof(buff), MSG_WAITALL);
 	cout << "---------------------------------------------" << endl;
 	cout << "接受到来自服务器的控制数据：" << buff << endl;
 	cout << "解析服务器发出的控制数据..." << endl;
@@ -141,12 +137,13 @@ void HandleDataFromServer()
 	}
 	else if (cmd_from_server.head == "GET") {
 		cout << "根据服务器指示，返回当前传感器数据:\n";
-		SendToServer(PORT,ip, current_sersor_data.c_str());
+		send_to_server(PORT,ip, current_sersor_data.c_str());
 	}
 
 	cout << "\n\n控制信号解析完毕！";
 }
 
+// 获取全部传感器数据
 string get_all_sensor_data() {
 	srand(time(NULL));
 	stringstream data;
