@@ -16,7 +16,8 @@ SOCKET wait_for_connection(); // 阻塞等待客户端连接
 int WSAAPI send_data(SOCKET, string); // 向客户端发送数据
 string receive_data(SOCKET); // 从客户端接收数据
 string parse(string); // 解析客户端传感器数据，并生成控制指令
-string get_local_ip(); // 获取本机IP
+void print_all_interface_ip(); // 输出本服务器全部网络接口的IP
+
 
 int main()
 {
@@ -164,16 +165,6 @@ string parse(string data)
 	return cmd_to_client;
 }
 
-// 获取本机IP
-string get_local_ip() {
-	char host[256];
-	int hostname = gethostname(host, sizeof(host));
-	struct hostent* host_entry;
-	host_entry = gethostbyname(host);
-	return inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[2]));
-}
-
-
 // 初始化服务器本地套接字，将其置为监听状态
 bool initialize_socket() {
 	//使用Windows系统API
@@ -197,7 +188,7 @@ bool initialize_socket() {
 	struct sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
 	local_addr.sin_port = htons(PORT);  //绑定特定端口
-	local_addr.sin_addr.s_addr = inet_addr(get_local_ip().c_str()); //绑定服务器本地IP地址
+	local_addr.sin_addr.s_addr = INADDR_ANY; //绑定服务器全部网卡的IP地址
 
 	/*
 	* 初始化套接字
@@ -210,7 +201,7 @@ bool initialize_socket() {
 		return false;
 	}
 	cout << "Socket初始化成功！" << endl;
-	cout << "本服务器IP地址为：" << get_local_ip() << endl;
+	print_all_interface_ip();
 
 	/*
 	* listen()函数：将指定套接字置为监听状态
@@ -255,4 +246,16 @@ string receive_data(SOCKET s) {
 int WSAAPI send_data(SOCKET s, string data) {
 	cout << "\n向客户端发送控制数据： " + data;
 	return send(s, data.c_str(), data.size(), 0); //返回给客户端数据
+}
+
+void print_all_interface_ip() {
+	char host[50];
+	gethostname(host, sizeof(host));
+	struct hostent* host_entry = gethostbyname(host);
+	cout << "本服务器IP地址列表：\n";
+	int i = 0;
+	while (host_entry->h_addr_list[i] != 0) {
+		printf("  %d. IPv4: %s\n", i, inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[i])));
+		i++;
+	}
 }
