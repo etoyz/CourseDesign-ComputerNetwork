@@ -9,6 +9,7 @@ using namespace std;
 #define PORT 81 //监听的端口
 #define MAXIMUM_CONNECTION 10 // 最大连接数
 
+int connection_cnt = 0;
 string IP;
 string parse(string, int);
 string get_local_ip();
@@ -74,7 +75,8 @@ int main()
 		// 输出客户机的信息
 		string ip = inet_ntoa(client_addr.sin_addr);
 		cout << "\n\n\n\n======================================================================" << endl;
-		cout << "接收到新的连接请求! 源IP: " << ip << endl;
+		connection_cnt++;
+		cout << "接收到第 " << connection_cnt << " 个连接请求! 源主机IP: " << ip << endl;
 
 		// 处理客户机请求的数据
 		char buff[2048] = { 0 };

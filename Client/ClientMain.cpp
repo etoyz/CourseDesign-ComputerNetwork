@@ -151,13 +151,13 @@ string get_all_sensor_data() {
 	srand(time(NULL));
 	stringstream data;
 	data << rand() % 2; // 有无人
-	data << (rand() % 3) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
-	data << (rand() % 3) << (rand() % 10) << (rand() % 10); // 湿度00.0 - 49.9 ℃
+	data << (rand() % 2 + 1) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+	data << (rand() % 3) << (rand() % 10) << (rand() % 10); // 湿度00.0 - 49.9
 	data << rand() % 2 << rand() % 2; // 控制2个灯光
 	int ac = rand() % 2; // 空调状态
 	data << rand() % 2;
 	if (ac == 1) {
-		data << (rand() % 4) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+		data << (rand() % 3 + 1) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
 		data << (rand() % 3) + 1; // 风速  1 2 3
 		data << (rand() % 2); // 0制冷 1制热
 	}
