@@ -5,39 +5,38 @@
 
 using namespace std;
 
+#define PORT 81
+char ip[20];
 SOCKET server_socket_descriptor;
+string current_sersor_data;
 bool SendToServer(int, char*, const char* Msg);
 void HandleDataFromServer();
 string get_all_sensor_data();
+// 此结构体存储服务器传回的指令
+struct Cmd_From_Server
+{
+	string head;
+	string data;
+};
 
-/*
-	[1][3][3][2][[1][3][1][1]][1][1]
-	共 17位
-	房间状态：有无人。只上传
-	温度传感器：采集房间温度信息。只上传
-	湿度传感器：采集房间湿度信息。只上传
-	灯光：开闭状态；至少要有两路：卧室、卫生间；
-	空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
-	门窗状态：开闭状态；
-	窗帘状态：开闭幕状态；
-*/
+
 int main()
 {
-	char ip[20];
 	cout << "请输入IP地址：";
 	cin >> ip;
 	while (true) {
 		cout << "\n\n\n\n======================================================================" << endl;
-		string str = get_all_sensor_data();
-		if (SendToServer(81, ip, str.c_str()))
-			cout << "发送传感器数据：" << str.c_str() << endl;
+		current_sersor_data = get_all_sensor_data();
+		if (SendToServer(PORT, ip, current_sersor_data.c_str()))
+			cout << "发送传感器数据：" << current_sersor_data.c_str() << endl;
 		else
 		{
 			cout << "发送失败!" << endl;
 			exit(1);
 		}
 		HandleDataFromServer();
-		Sleep(10000);
+		//HandleDataFromServer();
+		Sleep(500);
 	}
 	// 释放资源
 	closesocket(server_socket_descriptor);
@@ -88,32 +87,61 @@ void HandleDataFromServer()
 	cout << "---------------------------------------------" << endl;
 	cout << "接受到来自服务器的控制数据：" << buff << endl;
 	cout << "解析服务器发出的控制数据..." << endl;
+	Cmd_From_Server cmd_from_server;
+	cmd_from_server.head.assign(buff, buff + 3);
+	cmd_from_server.data.assign(buff + 3, sizeof(buff));
+	string data = cmd_from_server.data;
 	cout << "---------------------------------------------" << endl;
-	cout << "做出如下动作:\n";
-	if (buff[0] == '1')
-		cout << "关闭所有设备\n";
-	if (buff[1] == '1')
-		cout << "关闭门窗\n";
-	if (buff[2] == '1')
-		cout << "打开卧室灯光\n";
-	if (buff[3] == '1')
-		cout << "关闭卫生间灯光\n";
-	if (buff[4] == '1') {
-		cout << "打开空调\n";
-		if (buff[5] == '0')
-			cout << "开启空调制冷，";
-		else
-			cout << "开启空调制热，";
-		cout << "设定温度为" << buff[6] << buff[7] << "." << buff[8] << "℃，";
-		if (buff[9] == '0')
-		{
-			if (buff[10] == '0')
-				cout << "风速为低风";
-			else
-				cout << "风速为中风";
+	if (cmd_from_server.head == "SET") {
+		cout << "根据服务器指示，做出如下动作:\n";
+		if (data[0] == '1') {
+			cout << "关闭所有设备\n";
+			current_sersor_data[7] = 0;
+			current_sersor_data[8] = 0;
+			current_sersor_data[9] = 0;
+			current_sersor_data[15] = 0;
+			current_sersor_data[16] = 0;
 		}
-		else
-			cout << "风速为高风";
+		if (data[1] == '1') {
+			cout << "关闭门窗\n";
+			current_sersor_data[15] = 0;
+			current_sersor_data[16] = 0;
+		}
+		if (data[2] == '1') {
+			cout << "打开卧室灯光\n";
+			current_sersor_data[7] = 1;
+		}
+		if (data[3] == '1') {
+			cout << "关闭卫生间灯光\n";
+			current_sersor_data[8] = 0;
+		}
+		if (data[4] == '1') {
+			cout << "打开空调\n";
+			current_sersor_data[9] = 1;
+			if (data[5] == '0') {
+				cout << "开启空调制冷，";
+				current_sersor_data[14] = 0;
+			}
+			else {
+				cout << "开启空调制热，";
+				current_sersor_data[14] = 1;
+			}
+			cout << "设定温度为" << data[6] << data[7] << "." << data[8] << "℃，";
+			current_sersor_data[10] = data[6];
+			current_sersor_data[11] = data[7];
+			current_sersor_data[12] = 0;
+			if (data[8] == '1')
+					cout << "风速为低风";
+			else if (data[8] == '2')
+				cout << "风速为中风";
+			else if (data[8] == '3')
+				cout << "风速为高风";
+			current_sersor_data[13] = data[8]; // 风速
+		}
+	}
+	else if (cmd_from_server.head == "GET") {
+		cout << "根据服务器指示，返回当前传感器数据:\n";
+		SendToServer(PORT,ip, current_sersor_data.c_str());
 	}
 
 	cout << "\n\n控制信号解析完毕！";
@@ -123,14 +151,14 @@ string get_all_sensor_data() {
 	srand(time(NULL));
 	stringstream data;
 	data << rand() % 2; // 有无人
-	data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
-	data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 湿度00.0 - 49.9 ℃
+	data << (rand() % 3) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+	data << (rand() % 3) << (rand() % 10) << (rand() % 10); // 湿度00.0 - 49.9 ℃
 	data << rand() % 2 << rand() % 2; // 控制2个灯光
 	int ac = rand() % 2; // 空调状态
 	data << rand() % 2;
 	if (ac == 1) {
-		data << (rand() % 5) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
-		data << (rand() % 3) + 1 ; // 风速  1 2 3
+		data << (rand() % 4) << (rand() % 10) << (rand() % 10); // 温度00.0 - 49.9 ℃
+		data << (rand() % 3) + 1; // 风速  1 2 3
 		data << (rand() % 2); // 0制冷 1制热
 	}
 	else

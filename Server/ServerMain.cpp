@@ -6,7 +6,7 @@
 
 using namespace std;
 
-#define port 81 //监听的端口
+#define PORT 81 //监听的端口
 #define MAXIMUM_CONNECTION 10 // 最大连接数
 
 string IP;
@@ -35,7 +35,7 @@ int main()
 	*/
 	struct sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(port);  //绑定特定端口
+	local_addr.sin_port = htons(PORT);  //绑定特定端口
 	local_addr.sin_addr.s_addr = inet_addr(get_local_ip().c_str()); //绑定服务器本地IP地址
 
 	/*
@@ -84,7 +84,12 @@ int main()
 		string cmd_to_client = parse(recv_data, size);
 
 		// 使用第6步accept()返回socket描述符，即客户机的描述符，进行通信。
+		cout << "\n向客户端发送控制数据： " + cmd_to_client;
 		send(client_socket_descriptor, cmd_to_client.c_str(), cmd_to_client.size(), 0); //返回给客户端数据
+		// get
+		//cout << "\n一秒后发送GET信号";
+		//Sleep(1000);
+		//send(client_socket_descriptor, "GET", 3, 0); //返回给客户端数据
 
 		// 关闭该客户的socket
 		shutdown(client_socket_descriptor, 2);
@@ -95,7 +100,7 @@ int main()
 }
 
 /*
-* 解析请求的数据, 并发送控制数据
+* 解析客户端的请求数据, 并生成应返回的控制数据
 */
 string parse(string data, int size)
 {
@@ -103,7 +108,7 @@ string parse(string data, int size)
 	cout << "请求数据:\n" << data << endl;
 	cout << "共 " << size << " 字节。" << endl;
 
-	// Parsing
+	// 解析
 	cout << "---------------------------------------------" << endl;
 	cout << "解析客户端发送过来的信息: " << endl;
 	cout << "房间状态：\t";
@@ -133,7 +138,7 @@ string parse(string data, int size)
 			<< ", 模式:" << data[14] << ")\n";
 	}
 	else
-		cout << "关闭状态";
+		cout << "关闭状态\n";
 	cout << "门窗状态：\t";
 	if (data[15] == '1')
 		cout << "开启状态\n";
@@ -154,9 +159,10 @@ string parse(string data, int size)
 		卫生间灯光
 		空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
 	*/
-	string cmd_to_client;
+	string cmd_to_client; // 发回客户端的控制信息
 	cout << "---------------------------------------------" << endl;
 	cout << "根据解析结果发送控制信息: " << endl;
+	cmd_to_client += "SET";
 	if (data[0] == '0') { // 无人
 		cout << "关闭所有设备\n";
 		cmd_to_client += "1";
@@ -184,20 +190,19 @@ string parse(string data, int size)
 		cout << "温度为 " + tempe_str + " ℃，";
 		if (t > 30) { // 且温度高于30度
 			cout << "开启空调制冷，设定温度为24度，风速为中风\n";
-			cmd_to_client += "102401";
+			cmd_to_client += "10242";
 		}
 		else if (t < 15) { // 且温度低于15度
 			cout << "开启空调制热，设定温度为26度，风速为高风\n";
-			cmd_to_client += "112610";
+			cmd_to_client += "11263";
 		}
 		else {
 			cout << "空调维持原状态\n";
-			cmd_to_client += "0XXXXX";
+			cmd_to_client += "0XXXX";
 		}
 	}
-	else cmd_to_client += "0XXXXX";
+	else cmd_to_client += "0XXXX";
 
-	cout << "\n向客户端发送控制数据： " + cmd_to_client;
 	return cmd_to_client;
 }
 
@@ -209,5 +214,5 @@ string get_local_ip() {
 	int hostname = gethostname(host, sizeof(host));
 	struct hostent* host_entry;
 	host_entry = gethostbyname(host);
-	return inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[3]));
+	return inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[2]));
 }
