@@ -18,6 +18,12 @@ string receive_data(SOCKET); // 从客户端接收数据
 string parse(string); // 解析客户端传感器数据，并生成控制指令
 void print_all_interface_ip(); // 输出本服务器全部网络接口的IP
 
+// 此结构体存储客户端发来的请求
+struct Data_From_Client
+{
+	string head;
+	string data;
+};
 
 int main()
 {
@@ -26,8 +32,6 @@ int main()
 		exit(-1);
 
 	cout << "正在等待客户端的连接...." << endl;
-
-
 	while (true)//循环接收客户端的请求
 	{
 		// 阻塞等待客户端的连接
@@ -47,10 +51,8 @@ int main()
 			cout << "\t共 " << ret << " 字节";
 		}
 
-		// get
 		//cout << "\n一秒后发送GET信号";
-		//Sleep(1000);
-		//send(client_socket_descriptor, "GET", 3, 0); //返回给客户端数据
+		parse(receive_data(client_socket));
 
 		// 关闭该客户的socket
 		shutdown(client_socket, 2);
@@ -60,109 +62,121 @@ int main()
 	return 0;
 }
 
-// 解析客户端的请求数据, 并生成应返回的控制数据
+/*
+* 解析客户端的请求数据
+* 
+* @returns 如果是DATA请求，生成应返回的控制数据; 如果是STAT请求，则返回空字符串
+*/ 
 string parse(string data)
 {
+	string ret; // 返回值
+
 	// 输出解析信息到标准输出设备
 	cout << "请求数据:\n" << data << endl;
 	cout << "共 " << data.size() << " 字节。" << endl;
 
 	// 解析
-	cout << "---------------------------------------------" << endl;
-	cout << "解析客户端发送过来的信息: " << endl;
-	cout << "房间状态：\t";
-	if (data[0] == '1')
-		cout << "有人\n";
-	else
-		cout << "无人\n";
-	cout << "房间温度：\t";
-	cout << data[1] << data[2] << "." << data[3] << "℃\n";
-	cout << "房间湿度：\t";
-	cout << data[4] << data[5] << "." << data[6] << "%rh\n";
-	cout << "卧室灯光：\t";
-	if (data[7] == '1')
-		cout << "开启状态\n";
-	else
-		cout << "关闭状态\n";
-	cout << "卫生间灯光：\t";
-	if (data[8] == '1')
-		cout << "开启状态\n";
-	else
-		cout << "关闭状态\n";
-	cout << "空调：\t\t";
-	if (data[9] == '1') {
-		cout << "开启状态";
-		cout << "(" << data[10] << data[11] << "." << data[12]
-			<< "℃, 风速:" << data[13]
-			<< ", 模式:" << data[14] << ")\n";
-	}
-	else
-		cout << "关闭状态\n";
-	cout << "门窗状态：\t";
-	if (data[15] == '1')
-		cout << "开启状态\n";
-	else
-		cout << "关闭状态\n";
-	cout << "窗帘状态：\t";
-	if (data[16] == '1')
-		cout << "开幕状态\n";
-	else
-		cout << "闭幕状态\n";
+	Data_From_Client data_from_client;
+	data_from_client.head = data.substr(0,4);
+	data_from_client.data = data.substr(4, data.size());
+	if (data_from_client.head == "DATA") {
+		data = data_from_client.data;
+		cout << "---------------------------------------------" << endl;
+		cout << "解析客户端发送过来的信息: " << endl;
+		cout << "房间状态：\t";
+		if (data[0] == '1')
+			cout << "有人\n";
+		else
+			cout << "无人\n";
+		cout << "房间温度：\t";
+		cout << data[1] << data[2] << "." << data[3] << "℃\n";
+		cout << "房间湿度：\t";
+		cout << data[4] << data[5] << "." << data[6] << "%rh\n";
+		cout << "卧室灯光：\t";
+		if (data[7] == '1')
+			cout << "开启状态\n";
+		else
+			cout << "关闭状态\n";
+		cout << "卫生间灯光：\t";
+		if (data[8] == '1')
+			cout << "开启状态\n";
+		else
+			cout << "关闭状态\n";
+		cout << "空调：\t\t";
+		if (data[9] == '1') {
+			cout << "开启状态";
+			cout << "(" << data[10] << data[11] << "." << data[12]
+				<< "℃, 风速:" << data[13]
+				<< ", 模式:" << data[14] << ")\n";
+		}
+		else
+			cout << "关闭状态\n";
+		cout << "门窗状态：\t";
+		if (data[15] == '1')
+			cout << "开启状态\n";
+		else
+			cout << "关闭状态\n";
+		cout << "窗帘状态：\t";
+		if (data[16] == '1')
+			cout << "开幕状态\n";
+		else
+			cout << "闭幕状态\n";
 
-	// Action
-	/*
-		[1][1][1][1][[1][3][1][1]]
-		是否关闭所有设备
-		门窗
-		卧室灯光
-		卫生间灯光
-		空调：当前电源状态、设置的温度、风速、模式（制冷还是制热）。
-	*/
-	string cmd_to_client; // 发回客户端的控制信息
-	cout << "---------------------------------------------" << endl;
-	cout << "根据解析结果发送控制信息: " << endl;
-	cmd_to_client += "SET";
-	if (data[0] == '0') { // 无人
-		cout << "关闭所有设备\n";
-		cmd_to_client += "1";
-	}
-	else cmd_to_client += "0";
-	if (data[0] == '1' && data[9] == '1') { // 有人且空调开启
-		cout << "关闭门窗\n";
-		cmd_to_client += "1";
-	}
-	else cmd_to_client += "0";
-	if (data[0] == '1' && data[16] == '0') { // 有人且窗帘关闭
-		cout << "打开卧室灯光\n";
-		cmd_to_client += "1";
-	}
-	else cmd_to_client += "0";
-	if (data[0] == '1' && data[16] == '1') { // 有人且窗帘打开
-		cout << "关闭卫生间灯光\n";
-		cmd_to_client += "1";
-	}
-	else cmd_to_client += "0";
-	if (data[0] == '1') { // 有人
-		string tempe_str = string(1, data[10]) + string(1, data[11]) + '.' + string(1, data[12]);
-		float t;
-		sscanf(tempe_str.c_str(), "%f", &t);
-		cout << "温度为 " + tempe_str + " ℃，";
-		if (t > 30) { // 且温度高于30度
-			cout << "开启空调制冷，设定温度为24度，风速为中风\n";
-			cmd_to_client += "10242";
+		// Action
+		/*
+			[1][1][1][1][[1][3][1][1]]
+			是否关闭所有设备
+			门窗
+			卧室灯光
+			卫生间灯光
+			空调：当前电源状态、设置的模式（制冷还是制热）、温度、风速、。
+		*/
+		cout << "---------------------------------------------" << endl;
+		cout << "根据解析结果发送控制信息: " << endl;
+		ret += "SET";
+		if (data[0] == '0') { // 无人
+			cout << "关闭所有设备\n";
+			ret += "1";
 		}
-		else if (t < 15) { // 且温度低于15度
-			cout << "开启空调制热，设定温度为26度，风速为高风\n";
-			cmd_to_client += "11263";
+		else ret += "0";
+		if (data[0] == '1' && data[9] == '1') { // 有人且空调开启
+			cout << "关闭门窗\n";
+			ret += "1";
 		}
-		else {
-			cout << "空调维持原状态\n";
-			cmd_to_client += "0XXXX";
+		else ret += "0";
+		if (data[0] == '1' && data[16] == '0') { // 有人且窗帘关闭
+			cout << "打开卧室灯光\n";
+			ret += "1";
 		}
+		else ret += "0";
+		if (data[0] == '1' && data[16] == '1') { // 有人且窗帘打开
+			cout << "关闭卫生间灯光\n";
+			ret += "1";
+		}
+		else ret += "0";
+		if (data[0] == '1') { // 有人
+			string tempe_str = string(1, data[10]) + string(1, data[11]) + '.' + string(1, data[12]);
+			float t;
+			sscanf(tempe_str.c_str(), "%f", &t);
+			cout << "温度为 " + tempe_str + " ℃，";
+			if (t > 30) { // 且温度高于30度
+				cout << "开启空调制冷，设定温度为24度，风速为中风\n";
+				ret += "10242";
+			}
+			else if (t < 15) { // 且温度低于15度
+				cout << "开启空调制热，设定温度为26度，风速为高风\n";
+				ret += "11263";
+			}
+			else {
+				cout << "空调维持原状态\n";
+				ret += "0XXXX";
+			}
+		}
+		else ret += "0XXXX";
 	}
-	else cmd_to_client += "0XXXX";
-
-	return cmd_to_client;
+	else if (data_from_client.head == "STAT")
+		return "";
+	return ret;
 }
 
 // 初始化服务器本地套接字，将其置为监听状态
