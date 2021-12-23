@@ -37,9 +37,9 @@ int main() {
 	SOCKET client_socket;
 	while ((client_socket = wait_for_connection()) != SOCKET_ERROR) {//循环接收客户端的请求
 		thread thread(&connection_handler, local_socket, client_socket);
-		thread.join();
+		thread.detach();
 	}
-	shutdown(local_socket, 2);
+	closesocket(local_socket);
 	WSACleanup();
 	return 0;
 }
@@ -58,9 +58,12 @@ void connection_handler(SOCKET local_socket, SOCKET client_socket) {
 			cout << "\t共 " << ret_s << " 字节。\t";
 		}
 	}
+	else {
+		cout << "  客户端异常!\n\n";
+	}
 
 	// 关闭该客户的socket
-	shutdown(client_socket, 2);
+	closesocket(client_socket);
 }
 
 /*
@@ -70,6 +73,8 @@ void connection_handler(SOCKET local_socket, SOCKET client_socket) {
 */
 string parse(string data)
 {
+	if (data.empty())
+		return "";
 	string ret; // 返回值
 
 	// 解析
@@ -274,10 +279,10 @@ void print_all_interface_ip() {
 	char host[50];
 	gethostname(host, sizeof(host));
 	struct hostent* host_entry = gethostbyname(host);
-	cout << "本服务器IP地址列表：\n";
+	cout << "网络适配器接口列表：\n";
 	int i = 0;
 	while (host_entry->h_addr_list[i] != 0) {
-		printf("  %d. IPv4: %s\n", i, inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[i])));
+		printf("  网卡 %d. IPv4: %s\n", i + 1, inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[i])));
 		i++;
 	}
 }
